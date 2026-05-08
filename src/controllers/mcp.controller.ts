@@ -31,13 +31,10 @@ export class MCPController {
             } satisfies MCPResponse)
         }
 
-        // Treat notifications (no id) specially if you want
         if (!('id' in body) || body.id === undefined) {
             if (body.method === 'notifications/initialized') {
-                // MCP client telling you it’s ready – you can just ignore it
                 return reply.code(204).send()
             }
-            // other notifications can also be ignored
             return reply.code(204).send()
         }
 
@@ -146,10 +143,8 @@ export class MCPController {
         try {
             let result
             if (args.mediaType === 'movie') {
-                // Reuse the movie path logic
                 result = await this.sourceService.getMovieSources(args.tmdbId)
             } else {
-                // mediaType === 'tv'
                 if (typeof args.season !== 'number' || typeof args.episode !== 'number') {
                     return reply.code(400).send({
                         jsonrpc: '2.0',
@@ -167,7 +162,7 @@ export class MCPController {
             const res: MCPResponse = {
                 jsonrpc: '2.0',
                 id: req.id,
-                result, // this is the OMSS SourceResponse
+                result,
             }
             return reply.send(res)
         } catch (err: any) {
