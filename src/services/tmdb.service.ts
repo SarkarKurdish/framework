@@ -74,7 +74,7 @@ export class TMDBService {
         try {
             const response = await fetch(`${this.baseUrl}/movie/${tmdbId}?api_key=${this.apiKey}`)
 
-            const movie = await response.json() as TMDBMovieResponse
+            const movie = (await response.json()) as TMDBMovieResponse
             const releaseDate = new Date(movie.release_date)
             const now = new Date()
             const released = releaseDate <= now && movie.status === 'Released'
@@ -123,7 +123,7 @@ export class TMDBService {
         try {
             const response = await fetch(`${this.baseUrl}/tv/${tmdbId}?api_key=${this.apiKey}`)
 
-            const tv = await response.json() as TMDBTVResponse
+            const tv = (await response.json()) as TMDBTVResponse
             const firstAirDate = new Date(tv.first_air_date)
             const now = new Date()
             const aired = firstAirDate <= now
@@ -178,7 +178,7 @@ export class TMDBService {
 
             // Get season details
             const response = await fetch(`${this.baseUrl}/tv/${tmdbId}/season/${season}?api_key=${this.apiKey}`)
-            const seasonData = await response.json() as TMDBSeasonResponse
+            const seasonData = (await response.json()) as TMDBSeasonResponse
             const episodeData = seasonData.episodes.find((ep) => ep.episode_number === episode)
 
             if (!episodeData) {
@@ -282,7 +282,7 @@ export class TMDBService {
             const endpoint = type === 'movie' ? 'movie' : 'tv'
             const response = await fetch(`${this.baseUrl}/${endpoint}/${tmdbId}/external_ids?api_key=${this.apiKey}`)
 
-            const data = await response.json() as { imdb_id?: string }
+            const data = (await response.json()) as { imdb_id?: string }
             const imdbId = data.imdb_id || undefined
             if (imdbId) {
                 await this.cache.set(cacheKey, imdbId, this.cacheTTL)
@@ -306,7 +306,7 @@ export class TMDBService {
 
         try {
             const response = await fetch(`${this.baseUrl}/find/${imdbId}?api_key=${this.apiKey}&external_source=imdb_id`)
-            const data = await response.json() as {
+            const data = (await response.json()) as {
                 movie_results: Array<{ id: number }>
                 tv_results: Array<{ id: number }>
             }

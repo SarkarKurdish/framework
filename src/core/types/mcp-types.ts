@@ -3,16 +3,18 @@ export interface MCPConfig {
     path?: string
 }
 
-export type MCPMethod = 'tools/list' | 'tools/call'
+export type MCPMethod = 'initialize' | 'tools/list' | 'tools/call'
 
 export interface MCPRequest {
+    jsonrpc: '2.0'
     id: string | number
-    method: MCPMethod
-    params?: Record<string, unknown>
+    method: MCPMethod | string
+    params?: unknown
 }
 
 export interface MCPResponse {
-    id: string | number
+    jsonrpc: '2.0'
+    id: string | number | null
     result?: unknown
     error?: {
         code: number

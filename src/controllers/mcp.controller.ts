@@ -25,22 +25,56 @@ export class MCPController {
 
         if (!body || !body.method) {
             return reply.code(400).send({
+                jsonrpc: '2.0',
                 id: body?.id ?? request.id,
                 error: { code: 400, message: 'Invalid MCP request' },
             } satisfies MCPResponse)
         }
 
+        // Treat notifications (no id) specially if you want
+        if (!('id' in body) || body.id === undefined) {
+            if (body.method === 'notifications/initialized') {
+                // MCP client telling you it’s ready – you can just ignore it
+                return reply.code(204).send()
+            }
+            // other notifications can also be ignored
+            return reply.code(204).send()
+        }
+
         switch (body.method) {
+            case 'initialize':
+                return this.handleInitialize(body, reply)
             case 'tools/list':
                 return this.handleToolsList(body, reply)
             case 'tools/call':
                 return this.handleToolsCall(body, reply)
             default:
                 return reply.code(400).send({
+                    jsonrpc: '2.0',
                     id: body.id ?? request.id,
                     error: { code: 400, message: `Unsupported method: ${body.method}` },
                 } satisfies MCPResponse)
         }
+    }
+    private async handleInitialize(req: MCPRequest, reply: FastifyReply) {
+        const res: MCPResponse = {
+            jsonrpc: '2.0',
+            id: req.id ?? null,
+            result: {
+                protocolVersion: '2025-06-18',
+                capabilities: {
+                    tools: {
+                        listChanged: true,
+                    },
+                },
+                serverInfo: {
+                    name: 'omss-mcp',
+                    version: '1.0.0',
+                },
+            },
+        }
+
+        return reply.send(res)
     }
 
     private async handleToolsList(req: MCPRequest, reply: FastifyReply) {
@@ -72,6 +106,7 @@ export class MCPController {
         ]
 
         const res: MCPResponse = {
+            jsonrpc: '2.0',
             id: req.id,
             result: { tools },
         }
@@ -82,6 +117,7 @@ export class MCPController {
         const params = req.params as ToolsCallParams | undefined
         if (!params || !params.name) {
             return reply.code(400).send({
+                jsonrpc: '2.0',
                 id: req.id,
                 error: { code: 400, message: 'Missing tool name in params' },
             } satisfies MCPResponse)
@@ -89,6 +125,7 @@ export class MCPController {
 
         if (params.name !== 'omss_get_sources') {
             return reply.code(400).send({
+                jsonrpc: '2.0',
                 id: req.id,
                 error: { code: 400, message: `Unknown tool: ${params.name}` },
             } satisfies MCPResponse)
@@ -97,6 +134,7 @@ export class MCPController {
         const args = params.arguments as ToolsCallParams['arguments']
         if (!args?.tmdbId || !args?.mediaType) {
             return reply.code(400).send({
+                jsonrpc: '2.0',
                 id: req.id,
                 error: {
                     code: 400,
@@ -114,6 +152,7 @@ export class MCPController {
                 // mediaType === 'tv'
                 if (typeof args.season !== 'number' || typeof args.episode !== 'number') {
                     return reply.code(400).send({
+                        jsonrpc: '2.0',
                         id: req.id,
                         error: {
                             code: 400,
@@ -126,12 +165,14 @@ export class MCPController {
             }
 
             const res: MCPResponse = {
+                jsonrpc: '2.0',
                 id: req.id,
                 result, // this is the OMSS SourceResponse
             }
             return reply.send(res)
         } catch (err: any) {
             const res: MCPResponse = {
+                jsonrpc: '2.0',
                 id: req.id,
                 error: {
                     code: 500,
