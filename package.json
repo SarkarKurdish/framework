@@ -28,12 +28,11 @@
     ],
     "scripts": {
         "build": "npm run clean && tsc && tsc-alias",
-        "dev": "tsx watch examples/basic-server.ts",
+        "dev": "tsx watch examples/basic-server.ts --env-file=.env",
         "clean": "npx rimraf dist",
         "format": "prettier --write \"src/**/*.ts\"",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:ci": "vitest run --coverage"
+        "test:unit": "node --env-file=.env ./node_modules/vitest/vitest.mjs run unit --coverage",
+        "test:integration": "node --env-file=.env ./node_modules/vitest/vitest.mjs run integration"
     },
     "keywords": [
         "omss",
@@ -63,11 +62,10 @@
     },
     "homepage": "https://github.com/omss-spec/framework#readme",
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=20.6.0"
     },
     "dependencies": {
         "@fastify/cors": "^11.2.0",
-        "dotenv": "^17.2.3",
         "fastify": "^5.7.1",
         "ioredis": "^5.9.2"
     },
