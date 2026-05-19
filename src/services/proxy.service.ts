@@ -104,7 +104,6 @@ export class ProxyService {
 
         const headers: Record<string, string> = {
             ...(proxyData.headers ?? {}),
-            'User-Agent': proxyData.headers?.['User-Agent'] ?? 'OMSS-Backend/1.0',
             ...(rangeHeader ? { Range: rangeHeader } : {}),
         }
 

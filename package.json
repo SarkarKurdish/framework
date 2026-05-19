@@ -30,7 +30,10 @@
         "build": "npm run clean && tsc && tsc-alias",
         "dev": "tsx watch examples/basic-server.ts",
         "clean": "npx rimraf dist",
-        "format": "prettier --write \"src/**/*.ts\""
+        "format": "prettier --write \"src/**/*.ts\"",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ci": "vitest run --coverage"
     },
     "keywords": [
         "omss",
@@ -71,10 +74,12 @@
     "devDependencies": {
         "@types/ioredis": "^4.28.10",
         "@types/node": "^20.0.0",
+        "@vitest/coverage-istanbul": "^4.1.6",
         "prettier": "^3.8.0",
         "tsc-alias": "^1.8.16",
         "tsx": "^4.21.0",
-        "typescript": "^5.3.0"
+        "typescript": "^5.3.0",
+        "vitest": "^4.1.6"
     },
     "peerDependencies": {
         "typescript": "^5.0.0"
