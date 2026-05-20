@@ -441,7 +441,26 @@ export class MyProvider extends BaseProvider {
 
 See the detailed [Provider Creation Guide](./examples/example-provider.ts) for a complete walkthrough.
 
-To test a singulare Provider without setting up the whole server, you can use the `npx @omss/framework/debug [path to provider file]` command, which will run the provider in isolation and allow you to test its functionality, without debugging the whole server.
+To test a singulare Provider without setting up the whole server, you can use the following file, which will run the provider in isolation and allow you to test its functionality, without debugging the whole server.
+
+```typescript
+import { ProviderMediaObject } from "@omss/framework"
+import {ExampleProvider} from "./example.js"
+
+const prov = new ExampleProvider()
+
+const mediaObj: ProviderMediaObject = {
+  title: "The Dark Knight",
+  tmdbId: "155",
+  releaseYear: "2008",
+  type: "movie",
+  imdbId: "tt0468569"
+}
+
+const resp = await prov.getMovieSources(mediaObj)
+
+console.log(resp)
+```
 
 ## 🧩 MCP Endpoints
 
