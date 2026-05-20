@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
 [![OMSS Spec](https://img.shields.io/badge/OMSS-v1.0.0-orange.svg)](https://github.com/omss-spec/omss-spec)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.6+-green.svg)](https://nodejs.org/)
 
 <img  alt="social preview" src="https://github.com/user-attachments/assets/bc6d19dc-0d86-43e5-86cc-6e1d32bdab40" />
 
@@ -440,6 +440,8 @@ export class MyProvider extends BaseProvider {
 ### Full Provider Example
 
 See the detailed [Provider Creation Guide](./examples/example-provider.ts) for a complete walkthrough.
+
+To test a singulare Provider without setting up the whole server, you can use the `npx @omss/framework/debug [path to provider file]` command, which will run the provider in isolation and allow you to test its functionality, without debugging the whole server.
 
 ## 🧩 MCP Endpoints
 
