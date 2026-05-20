@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Build, Lint, Audit & Test
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      HOST: localhost
+      PUBLIC_URL: http://localhost:3000
+      CACHE_TYPE: memory
+      MCP_ENABLED: false
+      TMDB_API_KEY: ${{ secrets.TMDB_KEY }}
+      TMDB_CACHE_TTL: 86400
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npx prettier --check "src/**/*.ts"
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+

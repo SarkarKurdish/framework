@@ -32,7 +32,7 @@
         "clean": "npx rimraf dist",
         "format": "prettier --write \"src/**/*.ts\"",
         "test:unit": "vitest run unit --coverage",
-        "test:integration": "node --env-file=.env ./node_modules/vitest/vitest.mjs run integration"
+        "test:integration": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run integration"
     },
     "keywords": [
         "omss",
