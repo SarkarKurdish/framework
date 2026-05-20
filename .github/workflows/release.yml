@@ -1,149 +1,77 @@
-name: Publish to npm
+name: pre release
 
 on:
-    workflow_dispatch:
-        inputs:
-            release_type:
-                description: "Version bump type"
-                required: true
-                type: choice
-                default: patch
-                options:
-                    - patch
-                    - minor
-                    - major
-                    - prepatch
-                    - preminor
-                    - premajor
-    push:
-        tags:
-            - "v[0-9]*.[0-9]*.[0-9]*"
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
 
 jobs:
-    trigger_release:
-        if: github.event_name == 'workflow_dispatch'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
+  trigger_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  ref: main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
 
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: npm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
 
-            - name: Configure git identity
-              run: |
-                  git config --global user.name "github-actions[bot]"
-                  git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Bump package version
-              id: bump
-              run: |
-                  RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-                  if echo "$RELEASE_TYPE" | grep -q "^pre"; then
-                    npm version "$RELEASE_TYPE" --preid=beta --no-git-tag-version
-                  else
-                    npm version "$RELEASE_TYPE" --no-git-tag-version
-                  fi
-                  VERSION=$(node -p "require('./package.json').version")
-                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Bump package version
+        id: bump
+        run: |
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
 
-            - name: Commit, tag, and push
-              run: |
-                  TAG="v${{ steps.bump.outputs.version }}"
-                  git add package.json package-lock.json
-                  git commit -m "chore: release $TAG"
-                  git push origin main
-                  git tag "$TAG"
-                  git push origin "$TAG"
+          if echo "$RELEASE_TYPE" | grep -q "^pre"; then
+            npm version "$RELEASE_TYPE" --preid=beta --no-git-tag-version
+          else
+            npm version "$RELEASE_TYPE" --no-git-tag-version
+          fi
 
-            - name: Summary
-              run: |
-                  {
-                    echo "## Release triggered"
-                    echo ""
-                    echo "- Version: \`${{ steps.bump.outputs.version }}\`"
-                    echo "- Tag pushed — the **publish_release** job will build, test, and publish to npm."
-                  } >> "$GITHUB_STEP_SUMMARY"
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-    publish_release:
-        if: github.event_name == 'push'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-            id-token: write
+      - name: Commit, tag, and push
+        run: |
+          TAG="v${{ steps.bump.outputs.version }}"
 
-        env:
-            PACKAGE_NAME: "@omss/framework"
+          git add package.json package-lock.json
+          git commit -m "chore: release $TAG"
 
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+          git tag "$TAG"
+          git push origin main --follow-tags
 
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  registry-url: "https://registry.npmjs.org"
-                  cache: npm
-
-            - name: Update npm for OIDC publishing compatibility
-              run: npm install -g npm@latest
-
-            - name: Read package version
-              id: version
-              run: |
-                  VERSION=$(node -p "require('./package.json').version")
-                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-                  echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-            - name: Check whether version already exists on npm
-              id: npm_check
-              run: |
-                  if npm view "${PACKAGE_NAME}@${{ steps.version.outputs.version }}" version >/dev/null 2>&1; then
-                    echo "published=true" >> "$GITHUB_OUTPUT"
-                    echo "Version ${{ steps.version.outputs.version }} already published — skipping npm publish."
-                  else
-                    echo "published=false" >> "$GITHUB_OUTPUT"
-                  fi
-
-            - name: Install dependencies
-              if: steps.npm_check.outputs.published != 'true'
-              run: npm ci
-
-            - name: Build
-              if: steps.npm_check.outputs.published != 'true'
-              run: npm run build
-
-            - name: Test
-              if: steps.npm_check.outputs.published != 'true'
-              run: npm run test:ci
-
-            - name: Publish to npm
-              if: steps.npm_check.outputs.published != 'true'
-              run: |
-                  VERSION="${{ steps.version.outputs.version }}"
-                  if echo "$VERSION" | grep -q -- "-beta\."; then
-                    npm publish --provenance --tag beta --access public
-                  else
-                    npm publish --provenance --access public
-                  fi
-
-            - name: Create GitHub Release
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1 || \
-                  gh release create "${{ steps.version.outputs.tag }}" \
-                    --generate-notes \
-                    --title "${{ steps.version.outputs.tag }}" \
-                    --prerelease=${{ contains(steps.version.outputs.version, '-beta') }}
+      - name: Summary
+        run: |
+          {
+            echo "## Release triggered"
+            echo ""
+            echo "- Version: \`${{ steps.bump.outputs.version }}\`"
+            echo "- Tag: \`v${{ steps.bump.outputs.version }}\`"
+            echo "- Publishing workflow will run automatically"
+          } >> "$GITHUB_STEP_SUMMARY"
