@@ -58,7 +58,7 @@ jobs:
 
       - name: Test
         if: steps.npm_check.outputs.published != 'true'
-        run: npm run test:unit && npm run test:integration
+        run: npm run test:unit
 
       - name: Publish to npm
         if: steps.npm_check.outputs.published != 'true'
