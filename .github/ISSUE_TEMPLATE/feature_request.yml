@@ -1,0 +1,72 @@
+name: "✨ Feature Request"
+description: "Suggest a new feature or improvement for @omss/framework."
+labels: ["type:feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand the use-case and evaluate the idea.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem / Motivation"
+      description: "What problem does this feature solve? What is the use-case?"
+      placeholder: "Right now there is no way to... which means providers have to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed Solution"
+      description: "Describe the feature or API change you'd like to see."
+      placeholder: |
+        Add a `priority` property to `BaseProvider` so that `ProviderRegistry` returns sources in a deterministic order.
+
+        ```ts
+        export abstract class BaseProvider {
+          abstract readonly priority: number
+        }
+        ```
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Area"
+      description: "Which part of the framework does this affect most?"
+      options:
+        - "ProviderRegistry / auto-discovery"
+        - "BaseProvider API"
+        - "OMSSServer / routing"
+        - "Proxy layer"
+        - "Cache layer"
+        - "TMDB integration"
+        - "Stremio compatibility"
+        - "MCP / AI integration"
+        - "Testing utilities"
+        - "TypeScript types"
+        - "Documentation"
+        - "CI / build tooling"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: "Would this be a breaking change?"
+      options:
+        - "No"
+        - "Yes"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Additional Context"
+      description: "Links, prior art, related issues, or any other relevant information."

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Questions & Discussions"
+    url: https://github.com/omss-spec/omss-spec/discussions
+    about: "Not a bug or feature request? Ask a question or start a discussion here."
+  - name: "📖 Documentation"
+    url: https://github.com/omss-spec/framework#readme
+    about: "Check the README for setup guides, API references, and examples."
+  - name: "🚀 Starter Template"
+    url: https://github.com/omss-spec/template
+    about: "Use the official template to bootstrap your own OMSS backend."

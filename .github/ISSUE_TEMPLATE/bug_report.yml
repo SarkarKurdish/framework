@@ -1,0 +1,82 @@
+name: "🐛 Bug Report"
+description: "Something in @omss/framework isn't working as expected."
+labels: ["type:bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill in as much detail as possible so we can reproduce and fix the issue quickly.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: "A clear and concise description of the bug."
+      placeholder: "When I call `registry.discoverProviders()`, it throws..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Minimal steps to reproduce the behaviour. A code snippet is ideal."
+      placeholder: |
+        1. Create an `OMSSServer` with `cache.type: 'memory'`
+        2. Call `registry.register(new MyProvider())`
+        3. Start the server with `server.start()`
+        4. Hit `GET /omss/movie?tmdbId=550`
+        5. See error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behaviour"
+      description: "What did you expect to happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Relevant Logs / Error Output"
+      description: "Paste any relevant logs here. This will be automatically formatted as code."
+      render: shell
+
+  - type: input
+    id: framework_version_exact
+    attributes:
+      label: "@omss/framework version. Run `npm list @omss/framework` in your project to find the version."
+      placeholder: "e.g. 1.1.22"
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      options:
+        - "Linux"
+        - "macOS"
+        - "Windows"
+        - "Docker / container"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cache_type
+    attributes:
+      label: "Cache type used"
+      options:
+        - "memory"
+        - "redis"
+        - "N/A"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Additional Context"
+      description: "Any other context, links to related issues, or screenshots."
