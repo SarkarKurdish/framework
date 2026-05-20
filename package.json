@@ -31,7 +31,7 @@
         "dev": "tsx watch examples/basic-server.ts --env-file=.env",
         "clean": "npx rimraf dist",
         "format": "prettier --write \"src/**/*.ts\"",
-        "test:unit": "node --env-file=.env ./node_modules/vitest/vitest.mjs run unit --coverage",
+        "test:unit": "vitest run unit --coverage",
         "test:integration": "node --env-file=.env ./node_modules/vitest/vitest.mjs run integration"
     },
     "keywords": [
