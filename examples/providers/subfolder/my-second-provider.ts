@@ -16,6 +16,7 @@ export class ExampleProvider extends BaseProvider {
     }
 
     async getMovieSources(media: ProviderMediaObject): Promise<ProviderResult> {
+        console.log("ballllsssssss")
         try {
             // Your implementation here
             return {

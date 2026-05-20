@@ -12,12 +12,27 @@
             "require": "./dist/index.js",
             "default": "./dist/index.js"
         },
+        "./debugging": {
+            "types": "./dist/debugging/index.d.ts",
+            "import": "./dist/debugging/index.js",
+            "default": "./dist/debugging/index.js"
+        },
+        "./debug": {
+            "import": "./dist/debugging/cli.js",
+            "default": "./dist/debugging/cli.js"
+        },
         "./package.json": "./package.json"
+    },
+    "bin": {
+        "omss-debug": "./dist/debugging/cli.js"
     },
     "typesVersions": {
         ">=4.1": {
             "*": [
                 "dist/*"
+            ],
+            "debugging": [
+                "dist/debugging/index.d.ts"
             ]
         }
     },
