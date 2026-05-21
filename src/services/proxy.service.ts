@@ -249,13 +249,17 @@ export class ProxyService {
     }
 
     /**
-     * Check if the response is a manifest file that needs rewriting
+     * Check if the response is a manifest file that needs rewriting.
+     * Makes sure that it is text based, but NOT a subtitle file.
      */
     private isManifestFile(contentType: string, url: string): boolean {
         const TEXT_BASED_MIME_REGEX = /^(text\/.*|application\/(.*\+xml|.*\+json|json|xml|javascript|yaml|x-yaml|x-www-form-urlencoded))(;.*)?$/i
         const isTextLike = TEXT_BASED_MIME_REGEX.test(contentType)
 
-        return isTextLike || /application\/(vnd\.apple\.mpegurl|x-mpegurl|dash\+xml)/i.test(contentType) || /\.m3u8(\?.*)?$/.test(url) || /\.mpd(\?.*)?$/.test(url)
+        return (
+            (isTextLike || /application\/(vnd\.apple\.mpegurl|x-mpegurl|dash\+xml)/i.test(contentType) || /\.m3u8(\?.*)?$/.test(url) || /\.mpd(\?.*)?$/.test(url)) &&
+            !/\.(vtt|srt|ass|ssa|ttml)(\?.*)?$/i.test(url)
+        )
     }
 
     /**
