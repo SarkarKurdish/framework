@@ -64,7 +64,7 @@ jobs:
           git commit -m "chore: release $TAG"
 
           git tag "$TAG"
-          git push origin main --follow-tags
+          git push --tags
 
       - name: Summary
         run: |
