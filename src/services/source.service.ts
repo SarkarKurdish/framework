@@ -1,6 +1,6 @@
 import { ProviderRegistry } from '../providers/provider-registry.js'
 import { CacheService } from '../core/cache.js'
-import { SourceResponse, ProviderResult, ResponseIdMapping, ProviderMediaObject, Diagnostic, Subtitle, Source } from '../core/types/index.js'
+import { SourceResponse, ProviderResult, ResponseIdMapping, ProviderMediaObject, Diagnostic, Subtitle, Source, ProxyData } from '../core/types/index.js'
 import { createTMDBValidator } from '../middleware/validation.js'
 import { OMSSErrors } from '../core/errors.js'
 import { TMDBService } from '../services/tmdb.service.js'
@@ -211,6 +211,31 @@ export class SourceService {
         }
     }
 
+    private async validateSourceUrl(proxyData: ProxyData, timeoutMs = 3000): Promise<boolean> {
+        if (process.env.INTERNAL_DEBUG === "true") {
+            return true
+        }
+
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+        try {
+            const res = await fetch(proxyData.url, {
+                method: 'GET',
+                headers: proxyData.headers ?? {},
+                signal: controller.signal,
+            })
+
+            if (!res.ok) return false
+            await res.body?.cancel()
+            return true
+        } catch {
+            return false
+        } finally {
+            clearTimeout(timeout)
+        }
+    }
+
     /**
      * Fetch results from all providers concurrently
      */
@@ -236,6 +261,32 @@ export class SourceService {
                     result = await provider.getMovieSources(media)
                 } else {
                     result = await provider.getTVSources(media)
+                }
+
+                if (process.env.NODE_ENV?.toLowerCase() !== 'test') {
+                    // lightweight parallel validation
+                    const validatedSources = await Promise.allSettled(
+                        result.sources.map(async (source) => {
+                            try {
+                                const urlObj = new URL(source.url)
+                                const data = urlObj.searchParams.get('data')
+                                if (!data) return null
+
+                                const proxyData = ProxyService.decodeProxyData(data)
+
+                                const isValid = await this.validateSourceUrl(proxyData)
+
+                                return isValid ? source : null
+                            } catch {
+                                return null
+                            }
+                        })
+                    )
+
+                    result.sources = validatedSources
+                        .filter((r): r is PromiseFulfilledResult<Source | null> => r.status === 'fulfilled')
+                        .map((r) => r.value)
+                        .filter(Boolean) as typeof result.sources
                 }
 
                 const duration = Date.now() - startTime
