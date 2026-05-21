@@ -212,7 +212,7 @@ export class SourceService {
     }
 
     private async validateSourceUrl(proxyData: ProxyData, timeoutMs = 3000): Promise<boolean> {
-        if (process.env.INTERNAL_DEBUG === "true") {
+        if (process.env.INTERNAL_DEBUG === 'true') {
             return true
         }
 
