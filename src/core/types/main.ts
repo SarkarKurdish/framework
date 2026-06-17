@@ -175,3 +175,18 @@ export interface ProviderMediaObject {
     imdbId: string
     title: string
 }
+
+// SSE stream events for movie/TV source endpoints
+export type SourceStreamEventType = 'start' | 'cache_hit' | 'provider_start' | 'provider_result' | 'complete' | 'error'
+
+export interface SourceStreamProviderRef {
+    id: string
+    name: string
+}
+
+export interface SourceStreamEvent {
+    type: SourceStreamEventType
+    data: Record<string, unknown>
+}
+
+export type SourceEventEmitter = (event: SourceStreamEvent) => void

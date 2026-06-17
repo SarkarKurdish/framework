@@ -257,6 +257,34 @@ describe('SourceService - diagnostic PARTIAL_SCRAPE', () => {
   })
 })
 
+describe('SourceService - stream events', () => {
+  it('emits start, provider, and complete events for movie fetch', async () => {
+    const { svc } = buildService()
+    const events: string[] = []
+
+    await svc.getMovieSources('12345', (event) => {
+      events.push(event.type)
+    })
+
+    expect(events[0]).toBe('start')
+    expect(events).toContain('provider_start')
+    expect(events).toContain('provider_result')
+    expect(events[events.length - 1]).toBe('complete')
+  })
+
+  it('emits cache_hit and complete on cache hit', async () => {
+    const { svc } = buildService()
+    const events: string[] = []
+
+    await svc.getMovieSources('12345')
+    await svc.getMovieSources('12345', (event) => {
+      events.push(event.type)
+    })
+
+    expect(events).toEqual(['start', 'cache_hit', 'complete'])
+  })
+})
+
 describe('SourceService - getMappingsCount / getMappingInfo', () => {
   it('tracks the mapping after a successful fetch', async () => {
     const { svc } = buildService()

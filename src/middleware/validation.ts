@@ -37,14 +37,14 @@ export async function validateContentType(request: FastifyRequest, reply: Fastif
     const accept = request.headers['accept']
 
     // Check Accept header
-    if (accept && !accept.includes('application/json') && !accept.includes('*/*')) {
+    if (accept && !accept.includes('application/json') && !accept.includes('text/event-stream') && !accept.includes('*/*')) {
         reply.code(406).send({
             error: {
                 code: 'UNSUPPORTED_MEDIA_TYPE',
-                message: 'Server only supports application/json responses',
+                message: 'Server only supports application/json and text/event-stream responses',
                 details: {
                     accept: accept,
-                    supported: ['application/json'],
+                    supported: ['application/json', 'text/event-stream'],
                 },
             },
             traceId: request.id,

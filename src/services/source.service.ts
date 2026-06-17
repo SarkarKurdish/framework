@@ -1,6 +1,6 @@
 import { ProviderRegistry } from '../providers/provider-registry.js'
 import { CacheService } from '../core/cache.js'
-import { SourceResponse, ProviderResult, ResponseIdMapping, ProviderMediaObject, Diagnostic, Subtitle, Source, ProxyData } from '../core/types/index.js'
+import { SourceResponse, ProviderResult, ResponseIdMapping, ProviderMediaObject, Diagnostic, Subtitle, Source, ProxyData, SourceEventEmitter } from '../core/types/index.js'
 import { createTMDBValidator } from '../middleware/validation.js'
 import { OMSSErrors } from '../core/errors.js'
 import { TMDBService } from '../services/tmdb.service.js'
@@ -25,7 +25,9 @@ export class SourceService {
     /**
      * Get movie sources from all providers
      */
-    async getMovieSources(tmdbId: string): Promise<SourceResponse> {
+    async getMovieSources(tmdbId: string, emit?: SourceEventEmitter): Promise<SourceResponse> {
+        emit?.({ type: 'start', data: { contentType: 'movie', tmdbId } })
+
         await this.tmdbValidator.validateMovie(tmdbId)
 
         const cacheKey = `movie:${tmdbId}`
@@ -34,6 +36,8 @@ export class SourceService {
         const cached = await this.cache.get<SourceResponse>(cacheKey)
         if (cached) {
             console.log(`[SourceService] Cache HIT for ${cacheKey}`)
+            emit?.({ type: 'cache_hit', data: { response: cached } })
+            emit?.({ type: 'complete', data: { response: cached } })
             return cached
         }
 
@@ -47,23 +51,8 @@ export class SourceService {
 
         // Fetch from providers and Stremio addons concurrently
         const [providerResults, stremioResult] = await Promise.all([
-            this.fetchFromProviders('movie', media),
-            this.stremioService?.hasEnabledAddons()
-                ? this.stremioService.getMovieSources(media).catch(
-                      (err): ProviderResult => ({
-                          sources: [],
-                          subtitles: [],
-                          diagnostics: [
-                              {
-                                  code: 'PROVIDER_ERROR',
-                                  message: `Stremio integration failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-                                  field: '',
-                                  severity: 'error',
-                              },
-                          ],
-                      })
-                  )
-                : Promise.resolve(null),
+            this.fetchFromProviders('movie', media, emit),
+            this.fetchStremioSources('movie', media, emit),
         ])
 
         const allResults: ProviderResult[] = [...providerResults]
@@ -87,13 +76,17 @@ export class SourceService {
         // Cache the response
         await this.cache.set(cacheKey, response, this.cacheTTL.sources)
 
+        emit?.({ type: 'complete', data: { response } })
+
         return response
     }
 
     /**
      * Get TV episode sources from all providers
      */
-    async getTVSources(tmdbId: string, season: number, episode: number): Promise<SourceResponse> {
+    async getTVSources(tmdbId: string, season: number, episode: number, emit?: SourceEventEmitter): Promise<SourceResponse> {
+        emit?.({ type: 'start', data: { contentType: 'tv', tmdbId, season, episode } })
+
         await this.tmdbValidator.validateTVEpisode(tmdbId, season, episode)
 
         const cacheKey = `tv:${tmdbId}:s${season}:e${episode}`
@@ -102,6 +95,8 @@ export class SourceService {
         const cached = await this.cache.get<SourceResponse>(cacheKey)
         if (cached) {
             console.log(`[SourceService] Cache HIT for ${cacheKey}`)
+            emit?.({ type: 'cache_hit', data: { response: cached } })
+            emit?.({ type: 'complete', data: { response: cached } })
             return cached
         }
 
@@ -115,23 +110,8 @@ export class SourceService {
 
         // Fetch from providers and Stremio addons concurrently
         const [providerResults, stremioResult] = await Promise.all([
-            this.fetchFromProviders('tv', media),
-            this.stremioService?.hasEnabledAddons()
-                ? this.stremioService.getTVSources(media).catch(
-                      (err): ProviderResult => ({
-                          sources: [],
-                          subtitles: [],
-                          diagnostics: [
-                              {
-                                  code: 'PROVIDER_ERROR',
-                                  message: `Stremio integration failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-                                  field: '',
-                                  severity: 'error',
-                              },
-                          ],
-                      })
-                  )
-                : Promise.resolve(null),
+            this.fetchFromProviders('tv', media, emit),
+            this.fetchStremioSources('tv', media, emit),
         ])
 
         const allResults: ProviderResult[] = [...providerResults]
@@ -156,6 +136,8 @@ export class SourceService {
 
         // Cache the response
         await this.cache.set(cacheKey, response, this.cacheTTL.sources)
+
+        emit?.({ type: 'complete', data: { response } })
 
         return response
     }
@@ -239,7 +221,7 @@ export class SourceService {
     /**
      * Fetch results from all providers concurrently
      */
-    private async fetchFromProviders(type: 'movie' | 'tv', media: ProviderMediaObject): Promise<ProviderResult[]> {
+    private async fetchFromProviders(type: 'movie' | 'tv', media: ProviderMediaObject, emit?: SourceEventEmitter): Promise<ProviderResult[]> {
         const providers = this.registry.getProviders()
 
         if (providers.length === 0) {
@@ -253,6 +235,11 @@ export class SourceService {
         console.log(`[SourceService] Fetching from ${supportedProviders.length} provider(s) ` + `(${providers.length - supportedProviders.length} filtered out)`)
 
         const promises = supportedProviders.map(async (provider) => {
+            emit?.({
+                type: 'provider_start',
+                data: { provider: { id: provider.id, name: provider.name } },
+            })
+
             try {
                 const startTime = Date.now()
                 let result: ProviderResult
@@ -292,11 +279,22 @@ export class SourceService {
                 const duration = Date.now() - startTime
                 console.log(`[SourceService] Provider '${provider.name}' returned ${result.sources.length} source(s) in ${duration}ms`)
 
+                emit?.({
+                    type: 'provider_result',
+                    data: {
+                        provider: { id: provider.id, name: provider.name },
+                        sources: result.sources,
+                        subtitles: result.subtitles,
+                        diagnostics: result.diagnostics,
+                        durationMs: duration,
+                    },
+                })
+
                 return result
             } catch (error) {
                 console.error(`[SourceService] Provider '${provider.name}' failed:`, error)
 
-                return {
+                const result: ProviderResult = {
                     sources: [],
                     subtitles: [],
                     diagnostics: [
@@ -308,12 +306,79 @@ export class SourceService {
                         },
                     ],
                 }
+
+                emit?.({
+                    type: 'provider_result',
+                    data: {
+                        provider: { id: provider.id, name: provider.name },
+                        sources: result.sources,
+                        subtitles: result.subtitles,
+                        diagnostics: result.diagnostics,
+                    },
+                })
+
+                return result
             }
         })
 
         const results = await Promise.allSettled(promises)
 
         return results.filter((r): r is PromiseFulfilledResult<ProviderResult> => r.status === 'fulfilled').map((r) => r.value)
+    }
+
+    private async fetchStremioSources(type: 'movie' | 'tv', media: ProviderMediaObject, emit?: SourceEventEmitter): Promise<ProviderResult | null> {
+        if (!this.stremioService?.hasEnabledAddons()) {
+            return null
+        }
+
+        const provider = { id: 'stremio', name: 'Stremio' }
+        emit?.({ type: 'provider_start', data: { provider } })
+
+        const startTime = Date.now()
+
+        try {
+            const result =
+                type === 'movie' ? await this.stremioService.getMovieSources(media) : await this.stremioService.getTVSources(media)
+
+            emit?.({
+                type: 'provider_result',
+                data: {
+                    provider,
+                    sources: result.sources,
+                    subtitles: result.subtitles,
+                    diagnostics: result.diagnostics,
+                    durationMs: Date.now() - startTime,
+                },
+            })
+
+            return result
+        } catch (err) {
+            const result: ProviderResult = {
+                sources: [],
+                subtitles: [],
+                diagnostics: [
+                    {
+                        code: 'PROVIDER_ERROR',
+                        message: `Stremio integration failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                        field: '',
+                        severity: 'error',
+                    },
+                ],
+            }
+
+            emit?.({
+                type: 'provider_result',
+                data: {
+                    provider,
+                    sources: result.sources,
+                    subtitles: result.subtitles,
+                    diagnostics: result.diagnostics,
+                    durationMs: Date.now() - startTime,
+                },
+            })
+
+            return result
+        }
     }
 
     /**

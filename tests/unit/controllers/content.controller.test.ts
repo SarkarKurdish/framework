@@ -17,6 +17,25 @@ function makeReply() {
   return r
 }
 
+function makeSSEReply(capturedEvents: any[] = []) {
+  let pendingEvent = 'message'
+  const reply: any = {
+    raw: {
+      writeHead: vi.fn(),
+      write: vi.fn((chunk: string) => {
+        if (chunk.startsWith('event: ')) {
+          pendingEvent = chunk.slice(7).trim()
+        } else if (chunk.startsWith('data: ')) {
+          capturedEvents.push({ type: pendingEvent, data: JSON.parse(chunk.slice(6)) })
+        }
+      }),
+      end: vi.fn(),
+    },
+    hijack: vi.fn(),
+  }
+  return reply
+}
+
 describe('ContentController', () => {
   let svc: ReturnType<typeof makeSourceService>
   let ctrl: ContentController
@@ -29,7 +48,7 @@ describe('ContentController', () => {
   describe('getMovie', () => {
     it('calls getMovieSources with the route param id', async () => {
       const reply = makeReply()
-      await ctrl.getMovie({ params: { id: '12345' } } as any, reply)
+      await ctrl.getMovie({ params: { id: '12345' }, headers: { accept: 'application/json' } } as any, reply)
       expect(svc.getMovieSources).toHaveBeenCalledWith('12345')
     })
 
@@ -37,9 +56,28 @@ describe('ContentController', () => {
       const result = { sources: [{ url: 'http://x.m3u8' }], responseId: 'abc' }
       svc.getMovieSources.mockResolvedValue(result)
       const reply = makeReply()
-      await ctrl.getMovie({ params: { id: '1' } } as any, reply)
+      await ctrl.getMovie({ params: { id: '1' }, headers: { accept: 'application/json' } } as any, reply)
       expect(reply.code).toHaveBeenCalledWith(200)
       expect(reply.send).toHaveBeenCalledWith(result)
+    })
+
+    it('streams SSE events when Accept is text/event-stream', async () => {
+      const events: any[] = []
+      const result = { sources: [{ url: 'http://x.m3u8' }], responseId: 'abc' }
+      svc.getMovieSources.mockImplementation(async (_id: string, emit?: (e: any) => void) => {
+        emit?.({ type: 'start', data: { contentType: 'movie', tmdbId: '1' } })
+        emit?.({ type: 'complete', data: { response: result } })
+        return result
+      })
+
+      const reply = makeSSEReply(events)
+      await ctrl.getMovie({ params: { id: '1' }, headers: { accept: 'text/event-stream' } } as any, reply)
+
+      expect(svc.getMovieSources).toHaveBeenCalledWith('1', expect.any(Function))
+      expect(reply.hijack).toHaveBeenCalled()
+      expect(events.some((e) => e.type === 'start')).toBe(true)
+      expect(events.some((e) => e.type === 'complete')).toBe(true)
+      expect(reply.raw.end).toHaveBeenCalled()
     })
   })
 

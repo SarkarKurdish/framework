@@ -41,6 +41,16 @@ describe('validateContentType middleware', () => {
     expect(reply.send).not.toHaveBeenCalled()
   })
 
+  it('does not reply when Accept is text/event-stream', async () => {
+    const req = { headers: { accept: 'text/event-stream' }, id: 'trace' } as any
+    const reply = makeReply()
+
+    await validateContentType(req, reply)
+
+    expect(reply.code).not.toHaveBeenCalled()
+    expect(reply.send).not.toHaveBeenCalled()
+  })
+
   it('replies 406 when Accept is not supported', async () => {
     const req = { headers: { accept: 'text/html' }, id: 'trace' } as any
     const reply = makeReply()
