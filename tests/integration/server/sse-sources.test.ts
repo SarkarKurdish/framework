@@ -84,6 +84,26 @@ describe('SSE source streaming', () => {
     expect(res.headers['access-control-allow-origin']).toBeTruthy()
   })
 
+  it('includes the same CORS headers as JSON responses', async () => {
+    const origin = 'http://localhost:5173'
+
+    const jsonRes = await app.inject({
+      method: 'GET',
+      url: '/v1/movies/155',
+      headers: { accept: 'application/json', origin },
+    })
+
+    const sseRes = await app.inject({
+      method: 'GET',
+      url: '/v1/movies/155',
+      headers: { accept: 'text/event-stream', origin },
+    })
+
+    expect(jsonRes.headers['access-control-allow-origin']).toBeTruthy()
+    expect(sseRes.headers['access-control-allow-origin']).toBe(jsonRes.headers['access-control-allow-origin'])
+    expect(sseRes.headers['access-control-expose-headers']).toBe(jsonRes.headers['access-control-expose-headers'])
+  })
+
   it('emits error event when no sources are available', async () => {
     const appNoProviders = await buildTestApp({ providers: [] })
 

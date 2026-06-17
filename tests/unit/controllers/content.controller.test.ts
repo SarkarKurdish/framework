@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { PassThrough } from 'stream'
 import { ContentController } from '../../../src/controllers/content.controller.js'
 
 function makeSourceService(overrides: Partial<Record<string, any>> = {}) {
@@ -17,24 +18,31 @@ function makeReply() {
   return r
 }
 
-function makeSSEReply(capturedEvents: any[] = []) {
-  let pendingEvent = 'message'
-  const reply: any = {
-    raw: {
-      writeHead: vi.fn(),
-      write: vi.fn((chunk: string) => {
-        if (chunk.startsWith('event: ')) {
-          pendingEvent = chunk.slice(7).trim()
-        } else if (chunk.startsWith('data: ')) {
-          capturedEvents.push({ type: pendingEvent, data: JSON.parse(chunk.slice(6)) })
-        }
-      }),
-      end: vi.fn(),
-    },
-    hijack: vi.fn(),
-    getHeaders: vi.fn().mockReturnValue({}),
-  }
+function makeSSEReply() {
+  const reply: any = {}
+  reply.code = vi.fn().mockReturnValue(reply)
+  reply.header = vi.fn().mockReturnValue(reply)
+  reply.type = vi.fn().mockReturnValue(reply)
+  reply.send = vi.fn().mockReturnValue(reply)
   return reply
+}
+
+function parseSSEChunks(chunks: string[]) {
+  const events: Array<{ type: string; data: Record<string, unknown> }> = []
+
+  for (const block of chunks.join('').split('\n\n').filter(Boolean)) {
+    let type = 'message'
+    let data = ''
+
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event: ')) type = line.slice(7)
+      if (line.startsWith('data: ')) data = line.slice(6)
+    }
+
+    if (data) events.push({ type, data: JSON.parse(data) })
+  }
+
+  return events
 }
 
 describe('ContentController', () => {
@@ -62,8 +70,7 @@ describe('ContentController', () => {
       expect(reply.send).toHaveBeenCalledWith(result)
     })
 
-    it('streams SSE events when Accept is text/event-stream', async () => {
-      const events: any[] = []
+    it('streams SSE via reply.send without hijacking', async () => {
       const result = { sources: [{ url: 'http://x.m3u8' }], responseId: 'abc' }
       svc.getMovieSources.mockImplementation(async (_id: string, emit?: (e: any) => void) => {
         emit?.({ type: 'start', data: { contentType: 'movie', tmdbId: '1' } })
@@ -71,14 +78,25 @@ describe('ContentController', () => {
         return result
       })
 
-      const reply = makeSSEReply(events)
+      const reply = makeSSEReply()
+      const chunks: string[] = []
+
+      reply.send.mockImplementation((stream: PassThrough) => {
+        stream.on('data', (chunk) => chunks.push(chunk.toString()))
+        return reply
+      })
+
       await ctrl.getMovie({ params: { id: '1' }, headers: { accept: 'text/event-stream' } } as any, reply)
+      await new Promise((resolve) => setImmediate(resolve))
+
+      const events = parseSSEChunks(chunks)
 
       expect(svc.getMovieSources).toHaveBeenCalledWith('1', expect.any(Function))
-      expect(reply.hijack).toHaveBeenCalled()
+      expect(reply.code).toHaveBeenCalledWith(200)
+      expect(reply.type).toHaveBeenCalledWith('text/event-stream')
+      expect(reply.send).toHaveBeenCalledWith(expect.any(PassThrough))
       expect(events.some((e) => e.type === 'start')).toBe(true)
       expect(events.some((e) => e.type === 'complete')).toBe(true)
-      expect(reply.raw.end).toHaveBeenCalled()
     })
   })
 
