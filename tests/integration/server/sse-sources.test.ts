@@ -70,6 +70,20 @@ describe('SSE source streaming', () => {
     expect(events.some((e) => e.event === 'complete')).toBe(true)
   })
 
+  it('includes Access-Control-Allow-Origin for SSE responses', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/movies/155',
+      headers: {
+        accept: 'text/event-stream',
+        origin: 'http://localhost:5173',
+      },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['access-control-allow-origin']).toBeTruthy()
+  })
+
   it('emits error event when no sources are available', async () => {
     const appNoProviders = await buildTestApp({ providers: [] })
 

@@ -9,6 +9,26 @@ export const SSE_HEADERS: Record<string, string> = {
     Connection: 'keep-alive',
 }
 
+const HEADERS_TO_SKIP = new Set(['content-length', 'transfer-encoding'])
+
+function normalizeReplyHeaders(headers: Record<string, unknown>): Record<string, string | string[]> {
+    const normalized: Record<string, string | string[]> = {}
+
+    for (const [key, value] of Object.entries(headers)) {
+        if (value === undefined || HEADERS_TO_SKIP.has(key.toLowerCase())) {
+            continue
+        }
+
+        if (Array.isArray(value)) {
+            normalized[key] = value.map(String)
+        } else {
+            normalized[key] = String(value)
+        }
+    }
+
+    return normalized
+}
+
 export function acceptsEventStream(request: FastifyRequest): boolean {
     const accept = request.headers?.accept
     if (!accept) return false
@@ -21,8 +41,13 @@ export function writeSSEEvent(reply: FastifyReply, event: SourceStreamEvent): vo
 }
 
 export function beginSSE(reply: FastifyReply): void {
+    const existingHeaders = normalizeReplyHeaders(reply.getHeaders() as Record<string, unknown>)
+
     reply.hijack()
-    reply.raw.writeHead(200, SSE_HEADERS)
+    reply.raw.writeHead(200, {
+        ...existingHeaders,
+        ...SSE_HEADERS,
+    })
 }
 
 export function endSSE(reply: FastifyReply): void {

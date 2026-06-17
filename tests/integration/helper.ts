@@ -150,7 +150,12 @@ export async function buildTestApp(opts: TestAppOptions = {}): Promise<FastifyIn
 
   const app = Fastify({ logger: false, genReqId: () => crypto.randomUUID() })
 
-  await app.register(cors, { origin: '*', methods: ['GET', 'OPTIONS', 'HEAD'] })
+  await app.register(cors, {
+    origin: '*',
+    methods: ['GET', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'Accept'],
+    exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range', 'Accept-Ranges'],
+  })
   app.addHook('preHandler', validateContentType)
   app.setErrorHandler(errorHandler)
 

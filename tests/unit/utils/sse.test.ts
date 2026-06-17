@@ -13,6 +13,7 @@ function makeReply() {
       end: vi.fn(),
     },
     hijack: vi.fn(),
+    getHeaders: vi.fn().mockReturnValue({}),
   }
   reply._writes = writes
   return reply
@@ -59,6 +60,26 @@ describe('beginSSE / endSSE', () => {
 
     expect(reply.hijack).toHaveBeenCalled()
     expect(reply.raw.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({ 'Content-Type': 'text/event-stream' }))
+  })
+
+  it('preserves existing reply headers such as CORS', () => {
+    const reply = makeReply()
+    reply.getHeaders = vi.fn().mockReturnValue({
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Content-Type',
+      vary: 'Origin',
+    })
+
+    beginSSE(reply)
+
+    expect(reply.raw.writeHead).toHaveBeenCalledWith(200, {
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Content-Type',
+      vary: 'Origin',
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    })
   })
 
   it('ends the raw response', () => {

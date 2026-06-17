@@ -32,6 +32,7 @@ function makeSSEReply(capturedEvents: any[] = []) {
       end: vi.fn(),
     },
     hijack: vi.fn(),
+    getHeaders: vi.fn().mockReturnValue({}),
   }
   return reply
 }
